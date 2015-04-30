@@ -1,0 +1,235 @@
+* ESTE ES SIERRA NORTE URBANA
+
+GET
+  STATA FILE='E:\Carpeta de Trabajo - 21042015\Indicadores ENAHO-FSU\base_unificada_reducida_v9.dta'.
+DATASET NAME Conjunto_de_datos1 WINDOW=FRONT.
+
+USE ALL. 
+COMPUTE filter_$=(dominiorural=8). 
+VARIABLE LABEL filter_$ 'dominiorural=6 (FILTER)'. 
+VALUE LABELS filter_$ 0 'Not Selected' 1 'Selected'. 
+FORMAT filter_$ (f1.0). 
+FILTER BY filter_$. 
+SORT CASES  BY dominiorural.
+SPLIT FILE SEPARATE BY dominiorural.
+
+* SOLO PARA URBANO (dominiorural==2 OR dominiorural==4 OR dominiorural==6 OR dominiorural==8 OR dominiorural==10 OR dominiorural==12 OR dominiorural==14)
+* PROBANDO MODELOS DE VIVIENDA Y SERVICIOS
+
+*Análisis descriptivo. 
+DESCRIPTIVES VARIABLES=
+d_num_personas 
+d_ratio_mujeres 
+d_ratio_menos6 
+d_ratio_mas65 
+d_ratio_vulne_6_65 
+d_ratio_pet 
+d_ratio_pet_mujeres 
+d_nadie_pet 
+d_edad_jh_vulne 
+d_monoparental 
+d_jh_mujer 
+d_jh_mujer_mono 
+d_jh_mujer_mono_solt 
+d_num_hijos 
+d_hijos_mujeres 
+d_jh_cony_SIS 
+d_jh_seguro 
+d_jh_enparejado 
+d_nohaymujer 
+d_t_conyuge 
+d_t_hijos 
+d_e_hmenor 
+d_e_hmayor 
+d_t_nietos 
+d_e_nmenor 
+d_e_nmayor 
+d_t_amp 
+d_t_extend 
+d_par_nucleo 
+d_par_sola 
+d_par_soltero 
+c_ed_conyuge 
+c_ed_conyuge_2 
+c_jh_prim_incom 
+c_jh_sec_incom 
+c_cony_prim_incom 
+c_cony_sec_incom 
+d_jh_anoedu
+d_cony_anoedu 
+d_max_anoedu 
+d_ano_educ_mujer 
+d_alguien_postgrado 
+d_alguien_est_sup 
+c_ed_max15 
+c_ed_max15_2 
+c_analf15 
+c_analf10 
+d_hog_sin_adult 
+c_caste_jh 
+c_indig_jh 
+c_caste_cony 
+c_indig_cony 
+d_edad_jh 
+d_edad_cony 
+d_edad_jh_cony_mujer 
+d_dif_edad_madre_hijo 
+d_hogar_seguro 
+d_ratio_pea 
+d_ratio_pea_mujeres 
+d_nadie_pea 
+d_ratio_pea_ocu 
+d_ratio_pea_ocu_mujeres
+ d_nadie_pea_ocu 
+c_jh_agri 
+ c_jh_sinsect
+c_jh_dep 
+c_jh_ind 
+c_jh_desemp 
+c_jh_sinocu 
+c_jh_aymara 
+c_jh_quechua 
+c_jh_nativa
+v_hacina 
+v_malpiso 
+v_hog_hacinado 
+v_malpared 
+v_maltecho 
+v_maltecho_1 
+v_maltecho_2 
+v_maltecho_3 
+v_usa_gas 
+v_usa_elec 
+v_usa_comb_solido 
+b_bien 
+b_biendur 
+b_bienel 
+b_bientelec 
+b_bien_per 
+s_agu_redd 
+s_agu_redf 
+s_agu_pil 
+s_agu_cis 
+s_agu_poz 
+s_agu_rio 
+s_agu_otr 
+s_dsg_redd 
+s_dsg_redf 
+s_dsg_sep 
+s_dsg_cie 
+s_dsg_rio 
+s_dsg_otrno 
+s_3serv 
+s_ning 
+s_comb_elct 
+s_comb_gas 
+s_comb_kro 
+s_comb_car 
+s_comb_len 
+s_comb_otr 
+s_comb_no 
+s_alum_elct 
+s_alum_kro 
+s_alum_ptrl 
+s_alum_vl 
+s_alum_otr 
+s_alum_otrno
+/SAVE
+  /STATISTICS=MEAN STDDEV MIN MAX.
+
+FACTOR
+  /VARIABLES 
+Zv_hacina
+Zv_malpiso
+Zv_usa_comb_solido
+Zv_maltecho
+Zd_max_anoedu
+ /MISSING LISTWISE 
+  /ANALYSIS 
+Zv_hacina
+Zv_malpiso
+Zv_usa_comb_solido
+Zv_maltecho
+Zd_max_anoedu
+/PRINT INITIAL DET KMO EXTRACTION ROTATION
+  /CRITERIA MINEIGEN(1) ITERATE(25)
+  /EXTRACTION PC
+  /CRITERIA ITERATE(25)
+  /ROTATION VARIMAX
+  /SAVE REG(ALL)
+  /METHOD=CORRELATION.
+
+RECODE pobreza (3=0) (2=1) (1=1) INTO pobre. 
+
+ROC
+  FAC1_1  BY  pobre(1)
+  /PLOT = CURVE(REFERENCE)
+  /CRITERIA = CUTOFF(INCLUDE) TESTPOS(LARGE) DISTRIBUTION(FREE) CI(95)
+  /MISSING = EXCLUDE .
+
+GRAPH
+  /HISTOGRAM=FAC1_1.
+
+GRAPH
+  /LINE(MULTIPLE)=MEAN(v_hacina) BY decil_gasto BY a_o.
+
+GRAPH
+  /LINE(MULTIPLE)=MEAN(v_malpiso) BY decil_gasto BY a_o.
+
+GRAPH
+  /LINE(MULTIPLE)=MEAN(v_usa_comb_solido) BY decil_gasto BY a_o.
+
+GRAPH
+  /LINE(MULTIPLE)=MEAN(v_maltecho) BY decil_gasto BY a_o.
+
+ GRAPH
+ /LINE(MULTIPLE)=MEAN(d_max_anoedu) BY decil_gasto BY a_o.
+
+NONPAR CORR
+  /VARIABLES=FAC1_1 gpc_men_pc
+  /PRINT=SPEARMAN TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+CORRELATIONS
+  /VARIABLES=FAC1_1 gpc_men_pc
+  /PRINT=TWOTAIL NOSIG
+  /MISSING=PAIRWISE.
+
+  GRAPH
+  /SCATTERPLOT(BIVAR)=gpc_men_pc WITH FAC1_1 BY pobreza
+  /MISSING=LISTWISE.
+
+*---------------------------------------------------------------------------------------------------.
+ *GENERACION DE DECILES DE POBLACIÓN EN BASE AL GASTO
+ *Generar deciles de población en base al "GASTO TOTAL BRUTO" (gt2) (menor a mayor)
+*---------------------------------------------------------------------------------------------------.
+         * Ordenar registros en función al año y a la variable gt2.
+         SORT CASES BY gpc_men_pc (A).
+         * Ranking de la variable "gt2" en función al año .
+
+* (agrupamiento por deciles del Gasto Total Bruto.
+     RANK VARIABLES= gpc_men_pc (A)
+       /NTILES(10)
+       /PRINT=YES
+       /TIES=MEAN.
+
+         * Ordenar registros en función al año y a la variable gt2.
+         SORT CASES BY FAC1_1(A). 
+
+     RANK VARIABLES= FAC1_1(A) 
+      /NTILES(10)
+      /PRINT=YES
+      /TIES=MEAN.
+
+     * ahora genero Kappa
+     * (1) con los deciles se construyeron 10 categorias de cada variable respecto al ambito geográfico
+     * (2) luego se construye un crosstab entre ambas variables
+     * (3) Kappa sirve para medir que tan concordante son las distribuciones de los deciles de ambas variables
+     * (4) Genero la sintaxis.
+
+     CROSSTABS
+      /TABLES=Ngpc_men BY NFAC1_1
+      /FORMAT=AVALUE TABLES
+      /STATISTICS=KAPPA 
+      /CELLS=COUNT
+      /COUNT ROUND CELL.
