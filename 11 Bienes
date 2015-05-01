@@ -1,0 +1,223 @@
+***     ///////////////////////////////////////////////////////////////////////////////////
+***     PCA TOTAL (TODOS LOS AÑOS)
+***     VARIABLES DE BIENES
+***     ///////////////////////////////////////////////////////////////////////////////////
+
+*** (1)  DIRECTORIO DE UBICACION DE ARCHIVOS dta.
+           CD 'G:\DDGU 2015\5. Actividades\1. Algoritmo PCA\5. Bienes'. 
+
+*** (2)  ABRIR BASE DE DATOS DE VIVIENDA. 
+***       CON DATOS YA IMPUTADOS. 
+***       EN FORMATO STATA "dta".
+          GET FILE='ENAHO_TOTA1L.SAV' .
+
+VARIABLE LABELS
+b1                'Equipo de sonido'    		
+b2             	  'TV a color'    	
+b3                 'DVD'    	
+b4                 'Licuadora'    	
+b5                 'Refrigeradora'    		
+b6                 'Cocina a Gas'    	
+b7                 'Telefono Fijo'    			
+b8                 'Plancha Electrica'    			
+b9                 'Lavadora'    		
+b10                'Computadoras'    			
+b11                'Horno Microondas'    			
+b12          	   'Internet'    		
+b13                'Cable'    		
+b14               'Celular'    	
+b15               'Ninguna'    
+b_bien           'N ° de Bienes'    
+b_biendur       'N° de Bienes Durables'    
+b_bienel           'N ° de Bienes Electrodomésticos'    
+b_bientelec       'N° de Bienes Telecom'   
+b_bien_per       'N° de Bienes per Cápita'.
+ 
+*** (3)  GUARDAR ARCHIVO EN FORMATO SAV.
+     *      SAVE OUTFILE='base_vivienda_i_2014_prueba.sav'  /COMPRESSED.
+
+*SORT CASES  BY regnat_urb.
+
+
+*** (5)   FILTRAR AÑOS O AMBITOS SEGÚN.
+***        LOS ACORDADO. 
+        *    USE ALL.
+          *  COMPUTE filter_$=(a_o = 2013).
+            *VARIABLE LABELS filter_$ 'a_o = 2013 (FILTER)'.
+            *VALUE LABELS filter_$ 0 'Not Selected' 1 'Selected'.
+            *FORMATS filter_$ (f1.0).
+            *FILTER BY filter_$.
+            *EXECUTE.
+
+**************************************************************************************
+*               Bienes en el tiempo por decil URBANO- TERMINAN EN -1
+************************************************************************************** *****
+* 11 12 21 22 31 32 41 42 51 52 61 62 71 72
+*>> graficado el b1.
+USE ALL.
+COMPUTE filter_$=(GEO_DomArea =11).
+VARIABLE LABELS filter_$ 'GEO_DomArea = Rural  (FILTER)'.
+VALUE LABELS filter_$ 0 'Not Selected' 1 'Selected'.
+FORMATS filter_$ (f1.0).
+FILTER BY filter_$.
+EXECUTE.
+
+
+*** (6)   ESTANDARIZACIÓN DE VARIABLES.
+***        PARA EL ANÁLISIS DE COMPONENTES.
+***        PRINCIPALES. 
+            USE ALL.
+            DESCRIPTIVES VARIABLES=
+                    b1
+                    b2
+                    b3
+                    b4
+                    b5
+                    b6
+                    b7
+                    b8
+                    b9
+                    b10
+                    b11
+  	b12
+                    b13
+	b14
+	b_bien
+                  b_biendur
+                   b_bienel
+                 b_bientelec
+	b_bien_per
+               /SAVE
+              /STATISTICS=MEAN STDDEV MIN MAX.
+
+*** (7)   SINTAXIS PARA LA APLICACIÓN  DEL .
+***        ANALISIS FACTORIAL POR.
+***        COMPONENTES PRINCIPALES. Zb_bien_per.
+            FACTOR
+              /VARIABLES 
+                 Zb_bien
+                 Zb_biendur
+                 Zb_bienel
+                 Zb_bientelec
+                 Zb_bien_per
+	Zb4
+                 Zb8
+              /MISSING LISTWISE 
+              /ANALYSIS 
+                 Zb_bien
+                 Zb_biendur
+                 Zb_bienel
+                 Zb_bientelec
+Zb_bien_per
+	Zb4
+                Zb8
+              /PRINT INITIAL DET KMO EXTRACTION ROTATION
+              /CRITERIA MINEIGEN(1) ITERATE(25)
+              /EXTRACTION PC
+              /CRITERIA ITERATE(25)
+              /ROTATION VARIMAX
+              /SAVE REG(ALL)
+              /METHOD=CORRELATION.
+
+*** (8)   HISTOGRAMA DE LA PRIMERA COMPONENTE.
+***        (LA QUE EXPLICA LA MAYOR VARIBILIDAD DE. 
+***        LOS DATOS ORIGINALES). 
+          * GRAPH  /HISTOGRAM=FAC1_1.
+          *  GRAPH  /HISTOGRAM=FAC2_1.
+
+*** (9)   CORRELACIÓN NO PARAMÉTICA DE SPEARMAN.
+***        ENTRE LA PRIMERA COMPONETE PRINCIPAL.
+***        Y LA VARIABLE "gt2".
+          *  NONPAR CORR
+              /VARIABLES=FAC1_1 gpc_men_pc
+              /PRINT=SPEARMAN TWOTAIL NOSIG
+              /MISSING=PAIRWISE.
+
+            *NONPAR CORR
+              /VARIABLES=FAC2_1 gpc_men_pc
+              /PRINT=SPEARMAN TWOTAIL NOSIG
+              /MISSING=PAIRWISE.
+
+*** (10) CORRELACIÓN DE PEARSON.
+***        ENTRE LA PRIMERA COMPONETE PRINCIPAL.
+***        Y LA VARIABLE DE POBREZA "gt2".
+           *CORRELATIONS
+              /VARIABLES=FAC1_1 gpc_men_pc
+              /PRINT=TWOTAIL NOSIG
+              /MISSING=PAIRWISE.
+
+          *  CORRELATIONS
+              /VARIABLES=FAC2_1 gpc_men_pc
+              /PRINT=TWOTAIL NOSIG
+              /MISSING=PAIRWISE.
+
+*** (11) GRÁFICO DE DISPERSIÓN DE:....
+***        PRIMERA COMPONENTES vs POBREZA.
+            * GRAPH
+              /SCATTERPLOT(BIVAR)=gpc_men_pc WITH FAC1_1 BY pobreza
+              /MISSING=LISTWISE.
+
+            *GRAPH
+              /SCATTERPLOT(BIVAR)=gpc_men_pc WITH FAC2_1 BY pobreza
+              /MISSING=LISTWISE.
+
+//*---------------------------------------------------------------------------------------------------.
+ *GENERACION DE DECILES DE POBLACIÓN EN BASE AL GASTO
+ *Generar deciles de población en base al "GASTO TOTAL BRUTO" (gt2) (menor a mayor)
+*---------------------------------------------------------------------------------------------------.
+         * Ordenar registros en función al año y a la variable gt2.
+    *     SORT CASES BY gpc_men_pc (A).
+         * Ranking de la variable "gt2" en función al año .
+
+* (agrupamiento por deciles del Gasto Total Bruto.
+    * RANK VARIABLES= gpc_men_pc (A)
+   *    /NTILES(10)
+       /PRINT=YES
+       /TIES=MEAN.
+
+         * Ordenar registros en función al año y a la variable gt2.
+      *   SORT CASES BY FAC1_1(A). 
+
+    * RANK VARIABLES= FAC1_1(A) 
+      */NTILES(10)
+      /PRINT=YES
+      /TIES=MEAN.
+
+     * ahora genero Kappa
+     * (1) con los deciles se construyeron 10 categorias de cada variable respecto al ambito geográfico
+     * (2) luego se construye un crosstab entre ambas variables
+     * (3) Kappa sirve para medir que tan concordante son las distribuciones de los deciles de ambas variables
+     * (4) Genero la sintaxis.
+
+    * CROSSTABS
+      /TABLES=Ngpc_men BY NFAC1_1
+      /FORMAT=AVALUE TABLES
+      /STATISTICS=KAPPA 
+      /CELLS=COUNT
+      /COUNT ROUND CELL.
+      * cheque aqui: https://www.fisterra.com/mbe/investiga/kappa/kappa2.pdf   .
+      * VALORACION INDICE DE KAPPA
+      *   < 0.20 POBRE
+      *  0.20 -  0.4 DEBIL
+      *  0.4 A 0.6 moderada
+      * 0.6 a 0.8 buena
+      *   0.8 a 1 muy buena
+*// 
+
+RECODE pobreza (3=1) (2=0) (1=0) INTO pobre. 
+
+ROC
+  FAC1_1  BY  pobre(1)
+  /PLOT = CURVE(REFERENCE)
+  /CRITERIA = CUTOFF(INCLUDE) TESTPOS(LARGE) DISTRIBUTION(FREE) CI(95)
+  /MISSING = EXCLUDE .
+
+
+*ROC
+  FAC2_1  BY  pobre(1)
+  /PLOT = CURVE(REFERENCE)
+  /CRITERIA = CUTOFF(INCLUDE) TESTPOS(LARGE) DISTRIBUTION(FREE) CI(95)
+  /MISSING = EXCLUDE .
+
+
+
